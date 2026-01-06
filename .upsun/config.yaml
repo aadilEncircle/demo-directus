@@ -1,0 +1,77 @@
+name: demo-directus
+
+# -------------------
+# SERVICES
+# -------------------
+services:
+  directus:
+    type: nodejs:22
+    disk: 1024
+    root: directus
+
+  nextjs:
+    type: nodejs:22
+    disk: 1024
+    root: nextjs
+
+# -------------------
+# DATABASE
+# -------------------
+databases:
+  database:
+    type: postgresql:14
+
+# -------------------
+# PERSISTENT STORAGE
+# -------------------
+mounts:
+  "/directus/uploads":
+    source: local
+    source_path: uploads
+
+# -------------------
+# ROUTES
+# -------------------
+routes:
+  "https://{default}/":
+    type: upstream
+    upstream: "nextjs:http"
+
+  "https://{default}/api/":
+    type: upstream
+    upstream: "directus:http"
+
+# -------------------
+# DIRECTUS SETTINGS
+# -------------------
+variables:
+  env:
+    # Directus
+    KEY: "replace-with-strong-key"
+    SECRET: "6116487b-cda1-52c2-b5b5-c8022c45e263"
+
+    ADMIN_EMAIL: "admin@example.com"
+    ADMIN_PASSWORD: "StrongPassword123!"
+
+    PUBLIC_URL: "https://{default}/api"
+    DIRECTUS_HOST: "0.0.0.0"
+    DIRECTUS_PORT: "8080"
+
+    STORAGE_LOCAL_ROOT: "/directus/uploads"
+
+# -------------------
+# BUILD & START
+# -------------------
+hooks:
+  build: |
+    cd directus && npm install
+    cd ../nextjs && npm install
+
+  deploy: |
+    cd directus && npx directus bootstrap
+
+web:
+  commands:
+    start: |
+      cd directus && npx directus start &
+      cd nextjs && npm run start
