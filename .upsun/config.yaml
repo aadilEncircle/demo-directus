@@ -1,56 +1,54 @@
-# Upsun configuration, generated using AI at: 2026-01-08T03:55:13-08:00
-# AI can make mistakes. Please modify this file to suit your needs.
+# Upsun configuration for Directus (validated & simplified)
+
 applications:
-  nextjs:
+  directus:
+    type: nodejs:20
     source:
-      root: nextjs
-    type: nodejs:24
+      root: .
+
     dependencies:
       nodejs:
         pnpm: "*"
+
     build:
       flavor: none
+
     hooks:
       build: |
-        set -ex
-        pnpm install
-        pnpm run build
+        set -e
+        pnpm install --frozen-lockfile
 
-        # Move build artifacts to a temporary location to avoid conflict with the later mount.
-        mv .next .next-built
-
-      deploy: |
-        set -ex
-        # Symlink build artifacts (.next-built) into the existing mount (.next) during deployment.
-        touch .next/build-tree-id
-        if [ "$(< .next/build-tree-id)" != "$PLATFORM_TREE_ID" ]; then
-          cp -Rs $PWD/.next-built/* .next
-          echo -n "$PLATFORM_TREE_ID" > .next/build-tree-id
-        fi
     web:
       commands:
-        pre_start: |
-          # Wait for the deploy step to complete before starting the server.
-          touch .next/build-tree-id
-          if [ "$(< .next/build-tree-id)" != "$PLATFORM_TREE_ID" ]; then
-            echo >&2 "Waiting for deployment to complete"
-            while [ "$(< .next/build-tree-id)" != "$PLATFORM_TREE_ID" ]; do sleep 1; done
-          fi
-        start: pnpm run start -p "$PORT"
+        start: npx directus start
       locations:
         /:
-          root: public
           passthru: true
-          expires: 1h
-          scripts: false
+
+    relationships:
+      database: "postgresql:postgresql"
+
+    mounts:
+      /directus/uploads:
+        source: local
+        source_path: uploads
+
     variables:
       env:
-        NEXT_TELEMETRY_DISABLED: '1'
-    mounts:
-      .next:
-        source: storage
+        NODE_ENV: production
+        DIRECTUS_HOST: 0.0.0.0
+        DIRECTUS_PORT: 8080
+        DIRECTUS_PUBLIC_URL: "https://{default}/"
+        KEY: "7070255f406be6751d5c78a2f1a7984984a3dbf9e4f4442ea7d6d143d940b040"
+        SECRET: "6116487b-cda1-52c2-b5b5-c8022c45e263"
+        ADMIN_EMAIL: admin@example.com
+        ADMIN_PASSWORD: d1r3ctu5
+
+services:
+  postgresql:
+    type: postgresql:15
 
 routes:
   https://{default}/:
     type: upstream
-    upstream: nextjs:http
+    upstream: directus:http
