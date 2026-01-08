@@ -4,7 +4,7 @@ applications:
   directus:
     type: nodejs:20
     source:
-      root: .
+      root: directus
 
     dependencies:
       nodejs:
