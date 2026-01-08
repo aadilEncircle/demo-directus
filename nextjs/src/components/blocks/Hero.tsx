@@ -32,8 +32,6 @@ interface HeroProps {
 }
 
 export default function Hero({ data }: HeroProps) {
-	console.log("data >>", data);
-	
 	const { id, layout, tagline, headline, description, image, button_group } = data;
 
 	return (
@@ -47,7 +45,7 @@ export default function Hero({ data }: HeroProps) {
 						: 'md:flex-row items-center',
 			)}
 		>
-			<div
+			{/* <div
 				className={cn(
 					'flex flex-col gap-4 w-full',
 					layout === 'image_center' ? 'md:w-3/4 xl:w-2/3 items-center' : 'md:w-1/2 items-start',
@@ -95,12 +93,12 @@ export default function Hero({ data }: HeroProps) {
 						<ButtonGroup buttons={button_group.buttons} />
 					</div>
 				)}
-			</div>
+			</div> */}
 			{image && (
 				<div
 					className={cn(
 						'relative w-full',
-						layout === 'image_center' ? 'md:w-3/4 xl:w-2/3 h-[400px]' : 'md:w-1/2 h-[562px]',
+						layout === 'image_center' ? 'md:w-3/4 xl:w-2/3 aspect-[16/9]' : 'md:w-1/2 aspect-[4/5]',
 					)}
 					data-directus={setAttr({
 						collection: 'block_hero',
@@ -111,10 +109,11 @@ export default function Hero({ data }: HeroProps) {
 				>
 					<DirectusImage
 						uuid={image}
+						width={1920}
+						height={1080}
 						alt={tagline || headline || 'Hero Image'}
-						fill
-						sizes={layout === 'image_center' ? '100vw' : '(max-width: 768px) 100vw, 50vw'}
-						className="object-contain"
+						sizes="100vw"
+						className="w-full h-auto object-contain"
 					/>
 				</div>
 			)}

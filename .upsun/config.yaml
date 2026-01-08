@@ -1,77 +1,113 @@
+# Upsun configuration
 name: demo-directus
 
-# -------------------
-# SERVICES
-# -------------------
-services:
-  directus:
-    type: nodejs:22
-    disk: 1024
-    root: directus
+# ==================================================
+# APPLICATIONS
+# ==================================================
+applications:
 
+  # ------------------
+  # NEXT.JS
+  # ------------------
   nextjs:
-    type: nodejs:22
+    source:
+      root: nextjs
+    type: nodejs:24
+    dependencies:
+      nodejs:
+        pnpm: "*"
+    build:
+      flavor: none
+
+    hooks:
+      build: |
+        set -ex
+        pnpm install
+        pnpm run build
+        mv .next .next-built
+
+      deploy: |
+        set -ex
+        touch .next/build-tree-id
+        if [ "$(< .next/build-tree-id)" != "$PLATFORM_TREE_ID" ]; then
+          cp -Rs $PWD/.next-built/* .next
+          echo -n "$PLATFORM_TREE_ID" > .next/build-tree-id
+        fi
+
+    web:
+      commands:
+        pre_start: |
+          touch .next/build-tree-id
+          if [ "$(< .next/build-tree-id)" != "$PLATFORM_TREE_ID" ]; then
+            echo >&2 "Waiting for deployment to complete"
+            while [ "$(< .next/build-tree-id)" != "$PLATFORM_TREE_ID" ]; do sleep 1; done
+          fi
+        start: pnpm run start -p "$PORT"
+
+      locations:
+        /:
+          root: public
+          passthru: true
+          expires: 1h
+          scripts: false
+
+    mounts:
+      .next:
+        source: storage
+
+
+  # ------------------
+  # DIRECTUS
+  # ------------------
+  directus:
+    source:
+      root: directus
+    type: nodejs:20
     disk: 1024
-    root: nextjs
 
-# -------------------
-# DATABASE
-# -------------------
-databases:
-  database:
-    type: postgresql:14
+    relationships:
+      database: "postgresql:postgresql"
 
-# -------------------
-# PERSISTENT STORAGE
-# -------------------
-mounts:
-  "/directus/uploads":
-    source: local
-    source_path: uploads
+    hooks:
+      build: |
+        npm install
 
-# -------------------
+    web:
+      commands:
+        start: npx directus start
+      locations:
+        "/":
+          passthru: true
+
+    mounts:
+      /directus/uploads:
+        source: local
+        source_path: uploads
+
+    variables:
+      env:
+        DB_CLIENT: pg
+        DIRECTUS_HOST: "0.0.0.0"
+        DIRECTUS_PORT: "8055"
+        STORAGE_LOCAL_ROOT: "/directus/uploads"
+
+
+# ==================================================
+# SERVICES
+# ==================================================
+services:
+  postgresql:
+    type: postgresql:15
+
+
+# ==================================================
 # ROUTES
-# -------------------
+# ==================================================
 routes:
-  "https://{default}/":
+  https://{default}/:
     type: upstream
-    upstream: "nextjs:http"
+    upstream: nextjs:http
 
-  "https://{default}/api/":
+  https://{default}/api/:
     type: upstream
-    upstream: "directus:http"
-
-# -------------------
-# DIRECTUS SETTINGS
-# -------------------
-variables:
-  env:
-    # Directus
-    KEY: "replace-with-strong-key"
-    SECRET: "6116487b-cda1-52c2-b5b5-c8022c45e263"
-
-    ADMIN_EMAIL: "admin@example.com"
-    ADMIN_PASSWORD: "StrongPassword123!"
-
-    PUBLIC_URL: "https://{default}/api"
-    DIRECTUS_HOST: "0.0.0.0"
-    DIRECTUS_PORT: "8080"
-
-    STORAGE_LOCAL_ROOT: "/directus/uploads"
-
-# -------------------
-# BUILD & START
-# -------------------
-hooks:
-  build: |
-    cd directus && npm install
-    cd ../nextjs && npm install
-
-  deploy: |
-    cd directus && npx directus bootstrap
-
-web:
-  commands:
-    start: |
-      cd directus && npx directus start &
-      cd nextjs && npm run start
+    upstream: directus:http
