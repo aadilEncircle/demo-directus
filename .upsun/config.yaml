@@ -1,5 +1,6 @@
+# Upsun configuration, generated using AI at: 2026-01-08T03:55:13-08:00
+# AI can make mistakes. Please modify this file to suit your needs.
 applications:
-
   nextjs:
     source:
       root: nextjs
@@ -9,85 +10,47 @@ applications:
         pnpm: "*"
     build:
       flavor: none
-
     hooks:
       build: |
         set -ex
         pnpm install
         pnpm run build
+
+        # Move build artifacts to a temporary location to avoid conflict with the later mount.
         mv .next .next-built
 
       deploy: |
         set -ex
+        # Symlink build artifacts (.next-built) into the existing mount (.next) during deployment.
         touch .next/build-tree-id
         if [ "$(< .next/build-tree-id)" != "$PLATFORM_TREE_ID" ]; then
           cp -Rs $PWD/.next-built/* .next
           echo -n "$PLATFORM_TREE_ID" > .next/build-tree-id
         fi
-
     web:
       commands:
         pre_start: |
+          # Wait for the deploy step to complete before starting the server.
           touch .next/build-tree-id
           if [ "$(< .next/build-tree-id)" != "$PLATFORM_TREE_ID" ]; then
             echo >&2 "Waiting for deployment to complete"
             while [ "$(< .next/build-tree-id)" != "$PLATFORM_TREE_ID" ]; do sleep 1; done
           fi
         start: pnpm run start -p "$PORT"
-
       locations:
         /:
           root: public
           passthru: true
-
+          expires: 1h
+          scripts: false
+    variables:
+      env:
+        NEXT_TELEMETRY_DISABLED: '1'
     mounts:
       .next:
         source: storage
 
-
-  directus:
-    source:
-      root: directus
-    type: nodejs:20
-    disk: 1024
-
-    relationships:
-      database: "postgresql:postgresql"
-
-    hooks:
-      build: |
-        npm install
-
-    web:
-      commands:
-        start: npx directus start
-      locations:
-        "/":
-          passthru: true
-
-    mounts:
-      /directus/uploads:
-        source: local
-        source_path: uploads
-
-    variables:
-      env:
-        DB_CLIENT: pg
-        DIRECTUS_HOST: "0.0.0.0"
-        DIRECTUS_PORT: "8055"
-        STORAGE_LOCAL_ROOT: "/directus/uploads"
-
-
-services:
-  postgresql:
-    type: postgresql:15
-
-
 routes:
-  "https://{default}/":
+  https://{default}/:
     type: upstream
-    upstream: "nextjs:http"
-
-  "https://{default}/api/":
-    type: upstream
-    upstream: "directus:http"
+    upstream: nextjs:http
