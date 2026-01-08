@@ -1,14 +1,5 @@
-# Upsun configuration
-name: demo-directus
-
-# ==================================================
-# APPLICATIONS
-# ==================================================
 applications:
 
-  # ------------------
-  # NEXT.JS
-  # ------------------
   nextjs:
     source:
       root: nextjs
@@ -48,17 +39,12 @@ applications:
         /:
           root: public
           passthru: true
-          expires: 1h
-          scripts: false
 
     mounts:
       .next:
         source: storage
 
 
-  # ------------------
-  # DIRECTUS
-  # ------------------
   directus:
     source:
       root: directus
@@ -92,22 +78,16 @@ applications:
         STORAGE_LOCAL_ROOT: "/directus/uploads"
 
 
-# ==================================================
-# SERVICES
-# ==================================================
 services:
   postgresql:
     type: postgresql:15
 
 
-# ==================================================
-# ROUTES
-# ==================================================
 routes:
-  https://{default}/:
+  "https://{default}/":
     type: upstream
-    upstream: nextjs:http
+    upstream: "nextjs:http"
 
-  https://{default}/api/:
+  "https://{default}/api/":
     type: upstream
-    upstream: directus:http
+    upstream: "directus:http"
