@@ -1,0 +1,87 @@
+# Upsun configuration, generated using AI at: 2026-01-12T06:22:42-08:00
+# AI can make mistakes. Please modify this file to suit your needs.
+applications:
+  directus:
+    source:
+      root: directus-upsun
+    type: nodejs:24
+    build:
+      flavor: none
+    hooks:
+      build: |
+        set -ex
+        npm install
+        npm run argon2-rebuild
+
+        # Create .environment file with dynamic variables
+        cat > .environment <<EOF
+        CACHE_ENABLED=true
+        CACHE_STORE=redis
+        REDIS_HOST=$REDIS_HOST
+        REDIS_PORT=$REDIS_PORT
+        RATE_LIMITER_ENABLED=true
+        RATE_LIMITER_STORE=redis
+        RATE_LIMITER_REDIS_HOST=$REDIS_HOST
+        RATE_LIMITER_REDIS_PORT=$REDIS_PORT
+        KEY=$PLATFORM_PROJECT_ENTROPY
+        SECRET=$PLATFORM_PROJECT_ENTROPY
+        EOF
+
+      deploy: |
+        set -ex
+        if [ ! -f var/upsun.installed ]; then
+          echo 'Bootstrapping Directus on first deploy...'
+
+          export PROJECT_NAME='Directus on Upsun'
+          export ADMIN_EMAIL='admin@example.com'
+          export ADMIN_PASSWORD='password'
+
+          npx directus bootstrap
+
+          touch var/upsun.installed
+        else
+          npx directus database migrate:latest
+        fi
+
+    web:
+      commands:
+        start: npx directus start
+
+    variables:
+      env:
+        NODE_ENV: production
+        DB_CLIENT: pg
+        EXTENSIONS_PATH: ./extensions
+        UPLOADS_LOCATION: local
+        UPLOADS_LOCAL_ROOT: ./uploads
+
+    mounts:
+      var:
+        source: storage
+      uploads:
+        source: storage
+
+    relationships:
+      db: {}
+      redis: {}
+
+services:
+  db:
+    type: postgresql:18
+
+  redis:
+    type: redis:8.0
+
+routes:
+  https://{default}/:
+    type: upstream
+    upstream: directus:http
+    cache:
+      enabled: true
+      default_ttl: 0
+      cookies: ['*']
+      headers: ['Accept', 'Accept-Language']
+
+  https://www.{default}/:
+    type: redirect
+    to: https://{default}/
