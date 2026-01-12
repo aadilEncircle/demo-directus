@@ -1,0 +1,27 @@
+{
+  "name": "directus-upsun",
+  "version": "1.0.0",
+  "description": "Directus CMS deployment for Upsun",
+  "main": "index.js",
+  "scripts": {
+    "start": "npx directus start",
+    "build": "npx directus build",
+    "bootstrap": "npx directus bootstrap",
+    "validate": "node validate-env.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "directus",
+    "cms",
+    "upsun"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "directus": "^11.14.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

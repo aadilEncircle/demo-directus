@@ -1,0 +1,56 @@
+applications:
+  directus:
+    source:
+      root: "/"
+    
+    type: "nodejs:20"
+    
+    relationships:
+      database: "db:postgresql"
+      cache: "redis:redis"
+    
+    hooks:
+      build: |
+        npm ci --omit=dev
+        npm run build
+      deploy: |
+        npm run validate
+        npx directus bootstrap
+    
+    web:
+      commands:
+        start: "npm run start"
+      locations:
+        "/":
+          passthru: true
+          allow: true
+        "/health":
+          allow: false
+          passthru: false
+          serve: false
+    
+    routes:
+      "/":
+        to: "/"
+    
+    mounts:
+      uploads:
+        source: "storage"
+        source_path: "uploads"
+      extensions:
+        source: "storage"
+        source_path: "extensions"
+      uploads_database:
+        source: "volume"
+        source_path: "uploads"
+    
+    disk: 2048
+
+services:
+  db:
+    type: postgresql:16
+    disk: 2048
+  
+  redis:
+    type: redis:7
+    disk: 256

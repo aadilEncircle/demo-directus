@@ -1,0 +1,7 @@
+database:
+  image: postgis/postgis:16-master
+  platform: linux/amd64
+  ports:
+    - "5433:5432"  # Using 5433 to avoid conflict with local PostgreSQL
+  volumes:
+    - ./data/database:/var/lib/postgresql/data
